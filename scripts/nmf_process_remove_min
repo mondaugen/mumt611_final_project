@@ -1,0 +1,39 @@
+#!/usr/bin/octave -qf
+if (nargin != 5),
+    fprintf(stderr, ...
+    "NMF_SYNTH -- Synthesizes a signal from its NMF factors after a given number \
+    of iterations. \
+    path - The path to the file to carry out NMF on. This should be a \
+    collection of STFT frames stored in interleaved format where, if indexing \
+    starts at 0, the even indices contain doubles representing the real part \
+    of the signal and the odd indices represet the imaginary parts of the \
+    signal. \
+    N    - The number of bins in each spectrum. Required to parse the file \
+    containing the spectral data. \
+    J    - The number of components to search for. The is the number of rows \
+    in matrix G and the number of columns in matrix B. \
+    I    - The number of iterations of NMF to compute. \
+    M    - The number of minima to remove. This number must be less than J. \
+    The script writes the output to stdout.");
+    error('Incorrect number of input arguments.');
+end
+args=argv();
+[path,N,J,I,M]=args{:};
+N=str2num(N);
+J=str2num(J);
+I=str2num(I);
+M=str2num(M);
+X=read_spectral_data(path,N);
+[B,G]=nmf(abs(X),J,I);
+for m=1:M,
+    [mi,n]=min(sum(G.^2,2));
+    G(n,:)=[];
+    B(:,n)=[];
+end
+X_=B*G;
+Y=X_.*exp(1i*arg(X));
+Y=Y(:);
+Z=(1:length(Y)*2);
+Z(1:2:end)=real(Y);
+Z(2:2:end)=imag(Y);
+fwrite(stdout,Z,'double');

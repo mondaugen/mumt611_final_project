@@ -1,0 +1,50 @@
+#!/usr/bin/octave -qf
+if (nargin != 6),
+    fprintf(stderr, ...
+    "NMF_SYNTH -- Synthesizes a signal from its NMF factors after a given number \
+    of iterations.\n\
+    path - The path to the file to carry out NMF on. This should be a \n\
+    collection of STFT frames stored in interleaved format where, if indexing \n\
+    starts at 0, the even indices contain doubles representing the real part \n\
+    of the signal and the odd indices represet the imaginary parts of the \n\
+    signal. \n\
+    N    - The number of bins in each spectrum. Required to parse the file \n\
+    containing the spectral data. \n\
+    J    - The number of components to search for. The is the number of rows \n\
+    in matrix G and the number of columns in matrix B. \n\
+    I    - The number of iterations of NMF to compute. \n\
+    Th   - The threshold of spectral discontinuity. \n\
+    E    - 1 : Remove components whose spectral discontinuity exceeds the \n\
+    threshold, -1 : Remove components whose spectral continuity is below \n\
+    the threshold. \n\
+    The script writes the output to stdout.\n");
+    error('Incorrect number of input arguments.');
+end
+args=argv();
+[path,N,J,I,Th,E]=args{:};
+N=str2num(N);
+J=str2num(J);
+I=str2num(I);
+Th=str2num(Th);
+E=str2num(E);
+if (E == 1),
+    extrem=@max;
+elseif (E == -1),
+    extrem=@min;
+else
+    error('Invalid extrema argument.');
+endif;
+X=read_spectral_data(path,N);
+[B,G]=nmf(abs(X),J,I);
+for m=1:M,
+    [mi,n]=extrem(sum(G.^2,2));
+    G(n,:)=[];
+    B(:,n)=[];
+end
+X_=B*G;
+Y=X_.*exp(1i*arg(X));
+Y=Y(:);
+Z=(1:length(Y)*2);
+Z(1:2:end)=real(Y);
+Z(2:2:end)=imag(Y);
+fwrite(stdout,Z,'double');
