@@ -1,5 +1,5 @@
 #!/usr/bin/octave -qf
-if (nargin != 6),
+if (nargin != 7),
     fprintf(stderr, ...
     "NMF_SYNTH -- Synthesizes a signal from its NMF factors after a given number \
     of iterations.\n\
@@ -17,31 +17,65 @@ if (nargin != 6),
     E    - 1 : Remove components whose spectral discontinuity exceeds the \n\
     threshold, -1 : Remove components whose spectral continuity is below \n\
     the threshold. \n\
+    method - The method by which the components are removed \n\
+        1 : remove extrem components from original magnitude spectrum \n\
+        2 : synthesize spectrum using non-extreme components \n\
     The script writes the output to stdout.\n");
     error('Incorrect number of input arguments.');
 end
 args=argv();
-[path,N,J,I,Th,E]=args{:};
+[path,N,J,I,Th,E,method]=args{:};
 N=str2num(N);
 J=str2num(J);
 I=str2num(I);
 Th=str2num(Th);
 E=str2num(E);
-if (E == 1),
-    extrem=@max;
-elseif (E == -1),
-    extrem=@min;
-else
-    error('Invalid extrema argument.');
-endif;
+method=str2num(method);
 X=read_spectral_data(path,N);
 [B,G]=nmf(abs(X),J,I);
-for m=1:M,
-    [mi,n]=extrem(sum(G.^2,2));
-    G(n,:)=[];
-    B(:,n)=[];
+B_Th = zeros(size(B));
+G_Th = zeros(size(G));
+fprintf(stderr,"\n");
+if method == 1, % Find components with extreme spectral discontinuity and
+                % subtract them from the original magnitude spectrum
+    for n=(1:J),
+        % If E is 1, the components exceeding the threshold are kept here so
+        % that the original spectrum can have these components subtracted from
+        % it. 
+        d = dis_measure(B(:,n));
+        fprintf(stderr,"D: %f ",d);
+        if 2*(d < Th*N) == (1 - E)
+            % (This is just a tricky way to do the test)
+            B_Th(:,n) = B(:,n);
+            G_Th(n,:) = G(n,:);
+            fprintf(stderr,"removed");
+        end
+        fprintf(stderr,"\n");
+    end
+    X_Th=B_Th*G_Th;
+    X_=abs(X)-X_Th;
+    X_(X_ < 0) = 0;
+elseif method == 2, % Find components without extreme spectral discontinuity and
+                    % synthesize the final spectrum using only these
+    for n=(1:J),
+        % If E is 1, the components exceeding the threshold are kept here so
+        % that the original spectrum can have these components subtracted from
+        % it. 
+        d = dis_measure(B(:,n));
+        fprintf(stderr,"D: %f ",d);
+        if 2*(d >= Th*N) == (1 - E)
+            % (This is just a tricky way to do the test)
+            B_Th(:,n) = B(:,n);
+            G_Th(n,:) = G(n,:);
+            fprintf(stderr,"kept");
+        end
+        fprintf(stderr,"\n");
+    end
+    X_=B_Th*G_Th;
+else,
+    error('Invalid method.');
 end
-X_=B*G;
+    
 Y=X_.*exp(1i*arg(X));
 Y=Y(:);
 Z=(1:length(Y)*2);
