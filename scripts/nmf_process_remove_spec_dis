@@ -36,6 +36,7 @@ Th=str2num(Th);
 E=str2num(E);
 method=str2num(method);
 X=read_spectral_data(path,N);
+fprintf(stderr,'Starting NMF.\n');
 [B,G]=nmf(abs(X),J,I);
 B_Th = zeros(size(B));
 G_Th = zeros(size(G));
