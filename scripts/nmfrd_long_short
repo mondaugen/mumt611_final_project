@@ -1,0 +1,42 @@
+#!/bin/bash
+
+E_BADARGS=65
+
+if [[ $# -ne 16 ]]
+then
+cat <<EOF
+Parameters are:
+     1. path-to-sound-file
+     2. size-of-FFT (long)
+     3. size-of-FFT (short)
+     4. PVOC-window-size (as multiple of FFT-size) (long)
+     5. PVOC-window-size (as multiple of FFT-size) (short)
+     6. hop-size (long)
+     7. hop-size (short)
+     8. number-of-NMF-components
+     9. number-of-NMF-interations
+    10. spectral-discontinuity-threshold (frequency)
+    11. spectral-discontinuity-threshold (time)
+    12. extrema-flag :
+         1  = remove those exceeding threshold 
+        -1  = remove those under threshold
+    13. trim-offset
+    14. trim-length
+    15. sample-rate of analysis and result (the input will be resampled to this
+        rate)
+    16. output destination. put "-d" to hear result immediately
+EOF
+exit $E_BADARGS
+fi
+
+pvocpath=~/Documents/development/portnoff_pvoc/test/bin
+
+sox $1 -t f64 -c 1 -r ${15} - trim ${13} ${14} | \
+    ${pvocpath}/pstft_analy_test $2 $4 $6| \
+    ./nmf_process_remove_spec_dis stdin $2 $8 $9 ${10} ${12} 1 | \
+    ${pvocpath}/pstft_synth_test  $2 $6 $4 | \
+    ${pvocpath}/pstft_analy_test $3 $5 $7| \
+    ./nmf_process_remove_spec_dis stdin $3 $8 $9 ${11} ${12} 2 | \
+    ${pvocpath}/pstft_synth_test  $3 $7 $5 | \
+    sox -t f64 -r ${15} -c 1 - ${16}
+

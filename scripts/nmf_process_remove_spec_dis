@@ -14,12 +14,16 @@ if (nargin != 7),
     in matrix G and the number of columns in matrix B. \n\
     I    - The number of iterations of NMF to compute. \n\
     Th   - The threshold of spectral discontinuity. \n\
-    E    - 1 : Remove components whose spectral discontinuity exceeds the \n\
-    threshold, -1 : Remove components whose spectral continuity is below \n\
-    the threshold. \n\
+    E    - \n\
+        1 : Remove components whose spectral discontinuity exceeds the \n\
+            threshold \n\
+       -1 : Remove components whose spectral continuity is below \n\
+            the threshold. \n\
     method - The method by which the components are removed \n\
-        1 : remove extrem components from original magnitude spectrum \n\
-        2 : synthesize spectrum using non-extreme components \n\
+        1 : remove extreme components when discontinuity measured along the \n\
+            frequency axis. \n\
+        2 : remove extreme components when discontinuity measured along the \n\
+            time axis \n\
     The script writes the output to stdout.\n");
     error('Incorrect number of input arguments.');
 end
@@ -36,46 +40,42 @@ X=read_spectral_data(path,N);
 B_Th = zeros(size(B));
 G_Th = zeros(size(G));
 fprintf(stderr,"\n");
-if method == 1, % Find components with extreme spectral discontinuity and
-                % subtract them from the original magnitude spectrum
-    for n=(1:J),
-        % If E is 1, the components exceeding the threshold are kept here so
-        % that the original spectrum can have these components subtracted from
-        % it. 
+for n=(1:J),
+    % If E is 1, the components exceeding the threshold are kept here so
+    % that the original spectrum can have these components subtracted from
+    % it. 
+    if method == 1, 
+        % Find components with extreme spectral discontinuity along the
+        % frequency axis
         d = dis_measure(B(:,n));
-        fprintf(stderr,"D: %f ",d);
-        if 2*(d < Th*N) == (1 - E)
-            % (This is just a tricky way to do the test)
+    elseif method == 2,
+        % Find components with extreme spectral discontinuity along the
+        % time axis
+        d = dis_measure(G(n,:));
+    else,
+        error('Invalid method.');
+    end;
+    fprintf(stderr,"D: %f ",d);
+    if E == 1,
+        if (d > Th),
             B_Th(:,n) = B(:,n);
             G_Th(n,:) = G(n,:);
             fprintf(stderr,"removed");
-        end
-        fprintf(stderr,"\n");
-    end
-    X_Th=B_Th*G_Th;
-    X_=abs(X)-X_Th;
-    X_(X_ < 0) = 0;
-elseif method == 2, % Find components without extreme spectral discontinuity and
-                    % synthesize the final spectrum using only these
-    for n=(1:J),
-        % If E is 1, the components exceeding the threshold are kept here so
-        % that the original spectrum can have these components subtracted from
-        % it. 
-        d = dis_measure(B(:,n));
-        fprintf(stderr,"D: %f ",d);
-        if 2*(d >= Th*N) == (1 - E)
-            % (This is just a tricky way to do the test)
+        end;
+    elseif E == -1,
+        if (d <= Th),
             B_Th(:,n) = B(:,n);
             G_Th(n,:) = G(n,:);
-            fprintf(stderr,"kept");
-        end
-        fprintf(stderr,"\n");
+            fprintf(stderr,"removed");
+        end;
+    else,
+        error('Bad value for E.');
     end
-    X_=B_Th*G_Th;
-else,
-    error('Invalid method.');
+    fprintf(stderr,"\n");
 end
-    
+X_Th=B_Th*G_Th;
+X_=abs(X)-X_Th;
+X_(X_ < 0) = 0;
 Y=X_.*exp(1i*arg(X));
 Y=Y(:);
 Z=(1:length(Y)*2);

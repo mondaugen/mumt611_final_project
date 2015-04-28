@@ -17,8 +17,8 @@ Parameters are:
          1  = remove those exceeding threshold 
         -1  = remove those under threshold
     method-flag :
-         1  = synthesize by removing extreme components
-         2  = synthesize from non-extreme components 
+         1  = remove discontinuous frequency axis components
+         2  = remove discontinuous time axis components
     trim-offset
     trim-length
 EOF
@@ -27,8 +27,8 @@ fi
 
 pvocpath=~/Documents/development/portnoff_pvoc/test/bin
 
-sox $1 -t f64 -c 1 -r 44.1k - trim ${10} ${11} | \
+sox $1 -t f64 -c 1 -r 16k - trim ${10} ${11} | \
     ${pvocpath}/pstft_analy_test $2 $3 $4| \
     ./nmf_process_remove_spec_dis stdin $2 $5 $6 $7 $8 $9 | \
     ${pvocpath}/pstft_synth_test  $2 $4 $3 | \
-    sox -t f64 -r 44.1k -c 1 - -d
+    sox -t f64 -r 16k -c 1 - -d
