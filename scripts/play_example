@@ -1,0 +1,10 @@
+#!/bin/bash
+echo
+echo "  Original"
+echo
+sox ../results/original.wav -c 1 -d trim 5 19
+echo
+echo "  With Accompaniment Removed"
+echo
+sox ../results/processed.wav -c 1 -d trim 5 19
+exit 0

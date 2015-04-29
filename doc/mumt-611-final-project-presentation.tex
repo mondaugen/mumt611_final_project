@@ -1,7 +1,12 @@
 \documentclass[72pt]{article}
 \usepackage[a4paper,margin=1in,landscape]{geometry}
+\usepackage{amsmath}
 \usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{float}
 \DeclareMathSizes{72}{72}{72}{72}
+\DeclareGraphicsExtensions{.eps}
+%\graphicspath{{../plots/}{.}}
 \begin{document}
 
 \begin{Huge}
@@ -31,7 +36,7 @@ Applications:
             accompaniment remains static.
     \item Compared to percussive instrumental accompaniment, the singing voice
             spectrum does not vary as greatly over time as brief percussive
-            impulses
+            impulses.
 \end{itemize}
 
 \newpage
@@ -39,8 +44,8 @@ Applications:
 \section*{Why?}
 \begin{itemize}
     \item In Marin and McAdams (1991), studies showed that modulating the
-            frequency and vowel of a synthesized tone increased its prominence
-            among unmodulated vowels.
+            frequency and vowel of a synthesized tone increased its perceived
+            prominence among unmodulated vowels.
     \item This suggest that singers modulate frequency and amplitude of the
 voice to have prominence over other harmonic instruments.
 \end{itemize}
@@ -49,18 +54,30 @@ voice to have prominence over other harmonic instruments.
 
 \section*{Characteristics of Singing Voice Spectrograms}
 \begin{itemize}
-    \item Because the singing voice exhibits some frequency and amplitude
-    modulation, taking a long window spectrogram of the voice will show
-    excitation in different bins of adjacent frames, while a spectrogram of the
-    more static harmonic accompaniment will show adjacent frames sharing
-    prominent bins.
-\end{itemize}
+    \item According to Zhu et al. (2013), because the singing voice exhibits
+some frequency and amplitude modulation, taking a long-window spectrogram of the
+voice will show excitation in different bins of adjacent frames, while the same
+spectrogram of the more static harmonic accompaniment will show adjacent frames
+sharing prominent bins.
 
 \newpage
 
 % Insert long window slides of voice and instrument
 
-\begin{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics{maybe_if_8192_4096}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics{sax_accord_8192_4096}
+\end{figure}
+
+\newpage
+
     \item Because the singing voice exhibits less frequency and amplitude
     modulation than percussive instruments, taking a short window spectrogram of
     the singing voice will show excitation of the same bin in adjacent frames
@@ -72,7 +89,23 @@ voice to have prominence over other harmonic instruments.
 
 % Insert short window slides of voice and instrument
 
+\begin{figure}[H]
+    \centering
+    \includegraphics{maybe_if_1024_512}
+\end{figure}
+
+\newpage
+
+\begin{figure}[H]
+    \centering
+    \includegraphics{sax_accord_1024_512.eps}
+\end{figure}
+
+\newpage
+
+
 \section*{Technique}
+We use a technique documented in Zhu et al. (2013)
 \begin{itemize}
     \item These observations motivate a technique that removes those elements of
 the spectrogram that are not deemed to stem from the voice:
@@ -80,7 +113,7 @@ the spectrogram that are not deemed to stem from the voice:
         \item Remove spectra whose prominent bins are non-varying on a
 long-window spectrogram.
         \item Remove spectra whose prominent bins are varying on a short-window
-spectrogram
+spectrogram.
     \end{itemize}
 \end{itemize}
 
@@ -104,25 +137,25 @@ The following calculation is used to measure the amount of spectral
 discontinuity in the \( j^{th} \) column of \( \mathbf{B} \) (a basis vector) in
 order to identify spectra stemming from harmonic instruments
 
-\[ 
-d_s(\mathbf{B}^j) =
+\begin{equation} \label{eq:discontinuity_freq}
+d_\sigma(\mathbf{B}^j) =
 \frac{\sum\limits_{k=2}^{K}(\mathbf{B}_{k,j}-\mathbf{B}_{k-1,j})^2}{
     \sum\limits_{k=1}^{K}(\mathbf{B}_{k,j}^{2})}
-\]
+\end{equation}
 
 where \( K \) is the number of bins in the spectrogram.
 
 \newpage
 
 Similarly, the following calculation is used to measure the amount of
-discontinuity in the activation gains in the \( j^{th} \) column of \(
+discontinuity in the activation gains in the \( j^{th} \) row of \(
 \mathbf{G} \) in order to identify spectra stemming from percussive instruments
 
-\[ 
-d_s(\mathbf{G}^j) =
+\begin{equation} \label{eq:discontinuity_gain}
+d_\tau(\mathbf{G}^j) =
 \frac{\sum\limits_{t=2}^{T}(\mathbf{G}_{j,t}-\mathbf{G}_{j,t-1})^2}{
     \sum\limits_{t=1}^{T}(\mathbf{G}_{j,t}^{2})}
-\]
+\end{equation}
 
 where \( T \) is the number of frames in the spectrogram.
 
@@ -153,14 +186,97 @@ When using the Kullback-Leibler divergence and interpreting it as a
     {\mathbf{B}^{T}\mathbf{1}}
 \]
 
-Where \( . \) indicates element-wise multiply and \( \frac{}{} \) indicates
+Where \( \bigcirc.\bigcirc \) indicates element-wise multiply and \( \frac{\bigcirc}{\bigcirc} \) indicates
 element-wise division.
 
+\newpage
 
+Once the basis components have been identified using
+\eqref{eq:discontinuity_freq} and \eqref{eq:discontinuity_gain} they are removed
+from the magnitude spectrogram \( \mathbf{X} \) creating \( \tilde{\mathbf{X}} \) by
+first forming matrices \( \tilde{\mathbf{B}} \) and \( \tilde{\mathbf{G}} \) from those rows and
+columns deemed as too spectrally discontinuous, i.e., \( d_\sigma(\mathbf{B}) >
+\theta_s \) and \( d_\tau(\mathbf{G}) > \theta_t \), some thresholds of
+discontinuity. Their product is then subtracted from \( \mathbf{X} \) and the
+resulting magnitude clamped at 0.
+
+\[
+\mathbf{\tilde{X}} = \max(0,\mathbf{X} -
+\mathbf{\tilde{B}}\mathbf{\tilde{G}})
+\]
+
+\newpage
+
+\section*{Implementation}
+\begin{itemize}
+    \item Spectrogram of signal computed with C program
+        \begin{itemize}
+            \item performs short-time Fourier transform (STFT),
+            \item preserves phase information.
+        \end{itemize}
+    \item \textit{Octave}\footnote{www.gnu.org/software/octave/} used to carry
+        out NMF and remove discontinuous spectra.
+    \item Signal resynthesized using C program
+        \begin{itemize}
+            \item performs inverse STFT,
+            \item uses original phase information with new magnitudes.
+        \end{itemize}
+    \item \textit{Sox}\footnote{http://sox.sourceforge.net/} used to do format
+        and sample rate conversion.
+\end{itemize}
+
+\newpage
+
+\section*{Results}
+\begin{itemize}
+    \item Works qualitatively.
+    \item When using authors' dataset and parameter recommendations, some
+encouraging results are obtained.
+    \item The authors in Zhu et al. (2013) state ``Informal listening [...]
+showed that our algorithm can separate singing voice and music accompaniment to
+some degree."
+\end{itemize}
+
+\newpage
+
+\section*{Issues and Criticism}
+\begin{itemize}
+    \item Algorithm rather slow.
+    \item Suspect choice of parameters highly dependent upon dataset.
+    \item Choice of parameters also seems to depend on length of input signal.
+\end{itemize}
+
+\newpage
+
+\section*{Improvements}
+\begin{itemize}
+    \item Try to learn a good set of parameters using machine learning
+techniques.
+    \item Rather than totally elminating components, try simply attenuating
+them. This could reduce the presence of artifacts.
+    \item Try to further exploit the perceptual results of Marin and McAdams
+(1991) to better track the vocal part.
+\end{itemize}
 
 \end{Huge}
 
-
-
+\newpage
+\section*{Bibliography}
+\begin{flushleft}
+C. Marin and S. McAdams, ``Segregation of concurrent sounds. II: Effects of
+spectral envelope tracing, frequency modulation coherence, and frequency
+modulation width," in \textit{J. Acoust. Soc. Am.}, Vol 89, No. 1, January 1991.
+\par
+B. Zhu, W. Lei, R. Li, and X Xue, ``Multi-Stage Non-Negative Matrix
+Factorization for Monaural Singing Voice Separation," in \textit{IEEE Trans.
+Audio, Speech, Language Proc.}, Vol. 21, No. 10, October 2013.
+\par
+R. Hennequin, R. Badeau, and B. David, ``NMF With Time-Frequency Activations to
+Model Nonstationary Audio Events," in \textit{IEEE Trans.
+Audio, Speech, Language Proc.,}, Vol. 19, No. 4, May 2011.
+\par
+R. Hennequin, B. David, and R. Badeau ``Beta-Divergence as a Subclass of Bregman
+Divergence," in \textit{IEEE Sig. Proc. Letters}, Vol. 18, No. 2, February 2011.
+\end{flushleft}
 
 \end{document}

@@ -1,11 +1,11 @@
 #!/usr/bin/octave -qf
 % Writes the long and short plots of the spectrogram
-if (nargin != 3),
-    error('Missing arguments: path N_fft, Hop');
+if (nargin != 4),
+    error('Missing arguments: path N_fft, Hop, extra_text');
 end
 pkg load signal
 args=argv();
-[path, N_fft,Hop]=args{:};
+[path, N_fft,Hop,extra_text]=args{:};
 N_fft = str2num(N_fft);
 Hop = str2num(Hop);
 [x,fs]=wavread(path);
@@ -30,6 +30,6 @@ savpath=sprintf('%s_%d_%d.%s',cell2mat( ...
 ylabel('Frequency (Hz)');
 xlabel('Time (s)');
 title( ...
-    sprintf('Log Magnitude Spectrogram\n(Window Size: %d Hop Size: %d)', ...
-        N_fft,Hop));
+    sprintf('Log Magnitude Spectrogram %s\n(Window Size: %d Hop Size: %d)', ...
+        extra_text,N_fft,Hop));
 print(savpath,'-depsc2');

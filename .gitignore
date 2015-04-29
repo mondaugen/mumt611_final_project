@@ -1,3 +1,7 @@
 data
 results
 plots
+*.log
+*.pdf
+*.eps
+*.aux
