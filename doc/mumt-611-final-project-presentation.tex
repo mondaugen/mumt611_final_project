@@ -137,7 +137,7 @@ The following calculation is used to measure the amount of spectral
 discontinuity in the \( j^{th} \) column of \( \mathbf{B} \) (a basis vector) in
 order to identify spectra stemming from harmonic instruments
 
-\begin{equation} \label{eq:discontinuity_freq}
+\begin{equation} \label{eq:discontinuityfreq}
 d_\sigma(\mathbf{B}^j) =
 \frac{\sum\limits_{k=2}^{K}(\mathbf{B}_{k,j}-\mathbf{B}_{k-1,j})^2}{
     \sum\limits_{k=1}^{K}(\mathbf{B}_{k,j}^{2})}
@@ -151,7 +151,7 @@ Similarly, the following calculation is used to measure the amount of
 discontinuity in the activation gains in the \( j^{th} \) row of \(
 \mathbf{G} \) in order to identify spectra stemming from percussive instruments
 
-\begin{equation} \label{eq:discontinuity_gain}
+\begin{equation} \label{eq:discontinuitygain}
 d_\tau(\mathbf{G}^j) =
 \frac{\sum\limits_{t=2}^{T}(\mathbf{G}_{j,t}-\mathbf{G}_{j,t-1})^2}{
     \sum\limits_{t=1}^{T}(\mathbf{G}_{j,t}^{2})}
@@ -192,7 +192,7 @@ element-wise division.
 \newpage
 
 Once the basis components have been identified using
-\eqref{eq:discontinuity_freq} and \eqref{eq:discontinuity_gain} they are removed
+\eqref{eq:discontinuityfreq} and \eqref{eq:discontinuitygain} they are removed
 from the magnitude spectrogram \( \mathbf{X} \) creating \( \tilde{\mathbf{X}} \) by
 first forming matrices \( \tilde{\mathbf{B}} \) and \( \tilde{\mathbf{G}} \) from those rows and
 columns deemed as too spectrally discontinuous, i.e., \( d_\sigma(\mathbf{B}) >

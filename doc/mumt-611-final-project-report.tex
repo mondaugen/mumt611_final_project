@@ -1,0 +1,264 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=1in,portrait]{geometry}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsfonts}
+\DeclareGraphicsExtensions{.eps}
+\begin{document}
+
+\title{Monaural Singing Voice Separation Using Non-Negative Matrix 
+Factorization}
+\date{April 29th, 2015}
+\author{Nicholas Esterer}
+\maketitle
+
+\section*{Motivation: Separating the Singing Voice from Instrumental
+Accompaniment}
+The separation of the singing voice from its accompaniment makes it possible to
+apply algorithms that were orginally optimized for single-channel monophonic
+signals. Robust melody extraction would be useful in the context of automated
+song recognition by melody. Having the vocal part removed from the accompaniment
+would make it possible for monophonic music transcription systems to extract the
+melodic line. Another application could be singer identification, where the
+singer would hopefully be more easily identified from a signal absent of
+extraneous elements. In this paper, the implementation of a separation algorithm
+is discussed.
+
+\section*{Features of the Singing Voice}
+There are some features of the singing voice that can be exploited to design an
+algorithm for its extraction from a mixture of voice and instrumental music.
+Compared to harmonic instrumental accompaniment, the singing voice exhibits more
+frequency and amplitude modulation whereas compared to percussive instrumental
+accompaniment, the singing voice spectrum does not vary as greatly over time as
+brief percussive impulses.
+\section*{Why?}
+A study by Marin and McAdams (1991) suggests why this may be the case. In
+their study, it was shown that modulating the frequency and vowel of a
+synthesized tone increased its perceived prominence among unmodulated
+vowels. This suggest that singers modulate frequency and amplitude of the
+voice to have prominence over other harmonic instruments. This is especially
+present in operatic singing of which the deep vibrato is a major feature and
+which is practised without the aid of amplification.
+
+\section*{Characteristics of Singing Voice Spectrograms}
+These features of the singing voice can be observed in spectrograms. According
+to Zhu et al. (2013), because the singing voice exhibits some frequency and
+amplitude modulation, taking a long-window spectrogram of the voice will exhibit
+frames where not much variation is observed between adjacent bins of a given
+frame. The observation of the modulation over a long window causes this
+``smearing". The same spectrogram of the more static harmonic accompaniment will
+show much more variation between adjacent bins in a single frame. Observe this
+phenomenon in the following two slides: the first is the long-window spectrogram
+of a solo singing voice. The second is of instrumental accompaniment without
+vocals.
+\par
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=6.5in]{maybe_if_8192_4096}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=6.5in]{sax_accord_8192_4096}
+\end{figure}
+
+Because the singing voice exhibits less frequency and amplitude modulation than
+percussive instruments, taking a short-window spectrogram of the singing voice
+will show excitation of the same bin in adjacent frames whereas the spectrogram
+of a percussive sound will not share prominent bins among adjacent frames. This
+is demonstrated in the next two figures.
+\par
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=6.5in]{maybe_if_1024_512}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=6.5in]{sax_accord_1024_512.eps}
+\end{figure}
+
+\section*{Technique}
+The algorithm discussed here uses a technique documented in Zhu et al. (2013).
+The observations of singing-voice features motivate a technique that removes
+those elements of the spectrogram that are not deemed to stem from the voice:
+remove spectra whose prominent bins are non-varying on a long-window
+spectrogram, then, remove spectra whose prominent bins are varying on a
+short-window spectrogram.
+\par
+Of course, the singing voice and the instrumental accompaniment will often be
+simultaneous in a music recording and their respective spectra also simultaneous.
+We would like to separate these spectra. Hennequin et al. (2011), among others,
+have demonstrated that non-negative
+matrix factorization (NMF) is good at separating spectrograms into a set of basis
+vectors \( \mathbf{B} \) and their time-varying gains \( \mathbf{G} \).
+In the present algorithm we use NMF on both the long- and short-window
+spectrograms to compute basis spectra. We then identify spectra stemming from
+harmonic instruments and percussive instruments, respectively.
+\par
+The following calculation is used to measure the amount of spectral
+discontinuity in the \( j^{th} \) column of \( \mathbf{B} \) (a basis vector) in
+order to identify spectra stemming from harmonic instruments
+
+\begin{equation} \label{eq:discontinuityfreq}
+d_\sigma(\mathbf{B}^j) =
+\frac{\sum\limits_{k=2}^{K}(\mathbf{B}_{k,j}-\mathbf{B}_{k-1,j})^2}{
+    \sum\limits_{k=1}^{K}(\mathbf{B}_{k,j}^{2})}
+\end{equation}
+
+\noindent
+where \( K \) is the number of bins in the spectrogram.
+\par
+\newpage
+Similarly, the following calculation is used to measure the amount of
+discontinuity in the activation gains in the \( j^{th} \) row of \(
+\mathbf{G} \) in order to identify spectra stemming from percussive instruments
+
+\begin{equation} \label{eq:discontinuitygain}
+d_\tau(\mathbf{G}^j) =
+\frac{\sum\limits_{t=2}^{T}(\mathbf{G}_{j,t}-\mathbf{G}_{j,t-1})^2}{
+    \sum\limits_{t=1}^{T}(\mathbf{G}_{j,t}^{2})}
+\end{equation}
+
+\noindent
+where \( T \) is the number of frames in the spectrogram.
+\par
+
+\section*{The Computation of Spectral Bases}
+Given a spectrogram \( \mathbf{X} \in \mathbb{R}_{+}^{K \times T}\) of \( K \) bins and \( T \) frames, NMF
+will find an approximate factorization
+
+\[ \mathbf{X} \approx \mathbf{B}\mathbf{G} \]
+
+\noindent
+where \( \mathbf{B} \in \mathbb{R}_{+}^{K \times J}\) is a matrix of \( K \)
+rows and \( J \) columns and \( \mathbf{G} \in \mathbb{R}_{+}^{J \times T}\) is
+a matrix of \( J \) rows and \( T \) columns.
+\par
+When using the Kullback-Leibler divergence and interpreting it as a
+\(\beta\)-divergence where \(\beta = 1 \), according to Hennequin et al.
+(2011b), the divergence is non-increasing when using the following update rules:
+
+\[ \mathbf{B} \gets
+\mathbf{B}.\frac{\frac{\mathbf{X}}{\mathbf{B}\mathbf{G}}\mathbf{G}^T}
+    {\mathbf{1}\mathbf{G}^T}
+\]
+
+\[ \mathbf{G} \gets
+\mathbf{G}.\frac{\mathbf{B}^T\frac{\mathbf{X}}{\mathbf{B}\mathbf{G}}}
+    {\mathbf{B}^{T}\mathbf{1}}
+\]
+
+\noindent
+where \( \bigcirc.\bigcirc \) indicates element-wise multiply and \( \frac{\bigcirc}{\bigcirc} \) indicates
+element-wise division.
+\par
+Once the basis components have been identified using
+\eqref{eq:discontinuityfreq} and \eqref{eq:discontinuitygain} they are removed
+from the magnitude spectrogram \( \mathbf{X} \) creating \( \tilde{\mathbf{X}} \) by
+first forming matrices \( \tilde{\mathbf{B}} \) and \( \tilde{\mathbf{G}} \) from those rows and
+columns deemed as too spectrally discontinuous, i.e., \( d_\sigma(\mathbf{B}) >
+\theta_\sigma \) and \( d_\tau(\mathbf{G}) > \theta_\tau \), some thresholds of
+discontinuity. Their product is then subtracted from \( \mathbf{X} \) and the
+resulting magnitude clamped at 0.
+
+\[
+\mathbf{\tilde{X}} = \max(0,\mathbf{X} -
+\mathbf{\tilde{B}}\mathbf{\tilde{G}})
+\]
+
+
+
+\section*{Implementation}
+A C program was written that computes the spectrogram on a frame-by-frame basis.
+Sound data is read from \textit{stdin} (in a \textit{Unix} environment) and the
+spectrogram computed using the short-time Fourier transform (STFT) technique
+described in Portnoff (1976). These spectra are written to \textit{stdout} and
+read by an \textit{Octave}\footnote{www.gnu.org/software/octave/} script which
+computes the NMF of the spectrogram and removes the spectra exhibiting too much
+discontinuity. Finally, via \textit{stdout}, the spectral data is resynthesized
+using the inverse STFT on the new magnitude spectrum and the old phase spectrum,
+resulting in a sound with these spectral elements removed. The sequence is
+executed twice: first with a long-window STFT and then, after resynthesizing,
+with a short-window STFT. It should be noted that
+\textit{Sox}\footnote{http://sox.sourceforge.net/} is used to do format and
+sample rate conversion of the sound files.
+
+\section*{Difficulties}
+It proved slow to compute the spectrogram that included phase information in
+\textit{Octave} so a faster program written in C was opted for. It was not
+straightforward to translate the indexing in the analysis and
+synthesis stages into safe array indexing, i.e., indexing that remained within
+the boundaries of the array. In the end, it was easiest to allocate memory for
+windows and buffers but pass around pointers to the middle of the arrays rather
+than the beginning of allocated space. The final program worked as was proven
+by an identity analysis-resynthesis with little error in reconstruction.
+\par
+There were difficulties with the NMF algorithm when the input matrix \(
+\mathbf{X} \) contained elements equal to 0. It such cases, the divergence
+became undefined and the convergence of the algorithm halted. In order to
+prevent this, a small positive constant was added to the elements of \(
+\mathbf{X} \) before carrying out NMF. This solved this problem in all
+subsequent cases.
+\par
+Without using the dataset recommended in Zhu et al. (2013), it was hard to get
+convincing results. Only after specifically using the dataset on which they
+tried the algorithm did I acheive encouraging removal of instrumental
+accompaniment.
+\par
+Finally, the authors do not state a number of NMF iterations. Basically, the
+number of iterations chosen in this implementation was the result of
+finding a balance between a reasonable computation time and divergence
+magnitude.
+
+\section*{Issues and Criticism}
+The algorithm was found to be rather slow. A two hour long computation was
+required to obtain the sound file presented in the presentation. It also seems
+that the parameters suggested by the authors depend upon the length of the sound
+file. A higher number of NMF iterations were carried out on a shorter segment of
+the sound file and this in fact gave worse results. Of course, carrying out the
+analysis on too short of a segment would not give enough information to
+decompose into useful basis vectors. To give an idea, the full song was of
+about two-and-a-half minutes duration while the shorter segment was a half minute.
+
+
+\section*{Improvements}
+Rather than experimenting freely with the algorithm's parameters it could be
+fruitful (and long) to use machine learning techniques to find a near optimal
+set.
+\par
+The current algorithm totally eliminates those components not deemed as stemming
+from the voice. Perhaps only attenuating these and then repeating the algorithm
+could improve results and reduce the presence of artifacts.
+\par
+As a more general approach, perhaps further exploiting the perceptual results of
+Marin and McAdams (1991) could improve the algorithm by better identifiying the
+vocal part.
+
+
+\section*{Bibliography}
+\begin{flushleft}
+C. Marin and S. McAdams, ``Segregation of concurrent sounds. II: Effects of
+spectral envelope tracing, frequency modulation coherence, and frequency
+modulation width," in \textit{J. Acoust. Soc. Am.}, Vol 89, No. 1, January 1991.
+\par
+B. Zhu, W. Lei, R. Li, and X Xue, ``Multi-Stage Non-Negative Matrix
+Factorization for Monaural Singing Voice Separation," in \textit{IEEE Trans.
+Audio, Speech, Language Proc.}, Vol. 21, No. 10, October 2013.
+\par
+R. Hennequin, R. Badeau, and B. David, ``NMF With Time-Frequency Activations to
+Model Nonstationary Audio Events," in \textit{IEEE Trans.
+Audio, Speech, Language Proc.,}, Vol. 19, No. 4, May 2011.
+\par
+R. Hennequin, B. David, and R. Badeau ``Beta-Divergence as a Subclass of Bregman
+Divergence," in \textit{IEEE Sig. Proc. Letters}, Vol. 18, No. 2, February 2011.
+M. R. Portnoff, ``Implementation of the Digital Phase Vocoder Using the Fast
+Fourier Transform," in \textit{IEEE Trans.  Audio, Speech, Language Proc.,},
+Vol. ASSP-24, No. 3, June 1976.
+\end{flushleft}
+
+\end{document}
